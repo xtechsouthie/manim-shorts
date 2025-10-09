@@ -2,6 +2,7 @@ from langchain_openai import ChatOpenAI
 from langchain_core.messages import HumanMessage
 from .state import VideoState, ScriptOutput, VideoSegment
 
+#change this to use chatprompttemplate as they do in docs
 
 def scriptwriter_agent(state: VideoState, llm: ChatOpenAI) -> VideoState:
     print("Running scriptwriter\n")
