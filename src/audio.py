@@ -1,21 +1,18 @@
 from langgraph.types import Send
 from langgraph.graph import StateGraph, START, END
 from openai import OpenAI
+from typing import List
 from pathlib import Path
 from .state import VideoSegment, VideoState
 from pydub import AudioSegment
 
-def audio_orchestrator(state: VideoState) -> list[Send]:
+def audio_orchestrator(state: VideoState) -> List[Send]:
     print(f"Running audio orchestrator for creating audio for {len(state.segments)} segments\n")
 
-    return [
-        Send("audio_worker", {"segment": segment, "config": state})
-        for segment in state.segments
-    ]
+    return [Send("audio_worker", {"segment": segment}) for segment in state.segments]
 
-def audio_worker(seg: dict) -> VideoSegment:
+def audio_worker(seg: dict) -> dict:
     segment = seg["segment"]
-    state = seg["state"]
 
     print(f"----Worker processing segement ID: {segment.segment_id}")
 
@@ -49,20 +46,20 @@ def audio_worker(seg: dict) -> VideoSegment:
         segment.audio_duration_sec = duration
 
         print(f"----Segment {segment.segment_id} audio generated with duration of {duration:.2f} seconds")
-        return segment
+        return {"segments": [segment]}
     except Exception as e:
         print(f"----Error in segment: {e}")
-        return segment
+        return {"segments": [segment]}
     
 def create_audio_graph():
 
     graph = StateGraph(VideoState)
+    try:
+        graph.add_node("audio_worker", audio_worker)
 
-    graph.add_node("orchestrator", audio_orchestrator)
-    graph.add_node("audio_worker", audio_worker)
-    
-    graph.set_entry_point("orchestrator")
-    graph.add_conditional_edges("orchestrator", lambda x: x,)
-    graph.set_finish_point("aggregator")
+        graph.add_conditional_edges(START, audio_orchestrator)
+        graph.add_edge("audio_worker", END)
+    except Exception as e:
+        print(f"Error in creating audio: {e}")
 
     return graph.compile()

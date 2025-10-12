@@ -1,23 +1,21 @@
 from langgraph.types import Send
-from langgraph.graph import StateGraph
+from langgraph.graph import StateGraph, START, END
 from langchain_openai import ChatOpenAI
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.messages import HumanMessage
 from typing import List
 from .state import VideoSegment, VideoState
+from langchain_core.runnables.config import RunnableConfig
 
 def animation_planner_orchestrator(state: VideoState) -> List[Send]:
     print("Starting animation planner orchestrator")
-    return [
-        Send("animation_planner_worker", {"segment": segment, "state": state})
-        for segment in state.segments
-    ]
+    return [Send("animation_planner_worker", {"segment": segment, "topic": state.topic}) for segment in state.segments]
 
-def animation_planner_worker(data: dict, config: dict) -> VideoSegment:
+def animation_planner_worker(data: dict, config: RunnableConfig) -> dict:
 
     segment = data["segment"]
-    state = data["state"]
-    topic = state.topic
+    topic = data["topic"]
+
 
     llm = config["configurable"]["animation_llm"]
 
@@ -25,12 +23,13 @@ def animation_planner_worker(data: dict, config: dict) -> VideoSegment:
 
     try:
         prompt = ChatPromptTemplate.from_messages([
-            "system", "You are an expert at creating Manim library animation descriptions/prompts for educational videos."
-            "human", """Create a detailed Manim animation prompt for this segment:
+            ("system", "You are an expert at creating Manim library animation descriptions/prompts for educational videos."),
+            ("human", """Create a detailed Manim animation prompt for this segment:
 
                 Narration: {text}
                 Duration: {duration} seconds
                 Topic: {topic}
+                MAXIMUM LENGTH OF PROMPTS: 75 WORDS. MANAGE THE PROMPT WITHIN THE LIMIT
 
                 The video style should match to that of the youtube channel 3Blue1brown by
                 Grant Sanderson. The video animation prompt/description should be something that
@@ -52,7 +51,7 @@ def animation_planner_worker(data: dict, config: dict) -> VideoSegment:
                 - Key visual moments that sync with narration
 
                 Be specific and concise.
-                """
+                """)
         ])
 
         messages = prompt.format_messages(
@@ -65,22 +64,26 @@ def animation_planner_worker(data: dict, config: dict) -> VideoSegment:
         segment.animation_prompt = response.content
 
         print(f"----The animation prompt of segment {segment.segment_id} is created.")
-        return segment
+        return {"segments": [segment]}
     except Exception as e:
         print(f"Error creating segment: {e}")
-        return segment
+        return {"segments": [segment]}
     
 def create_animation_planner_graph():
     graph = StateGraph(VideoState)
+    try:
 
-    graph.add_node("orchestrator", animation_planner_orchestrator)
-    graph.add_node("animation_planner_worker", animation_planner_worker)
+        graph.add_node("animation_planner_worker", animation_planner_worker)
 
-    graph.set_entry_point("orchestrator")
-    graph.add_conditional_edges("orchestrator", lambda x: x)
-    graph.set_finish_point("animation_planner_worker")
+        graph.add_conditional_edges(START, animation_planner_orchestrator)
+        graph.add_edge("animation_planner_worker", END)
 
-    return graph.compile()
+        return graph.compile()
+    except Exception as e:
+        print(f"Error in animation planner: {e}")
+        return graph.compile()
+
+
 
 
 
