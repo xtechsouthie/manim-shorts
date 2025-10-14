@@ -13,12 +13,12 @@ class VideoSegment(BaseModel):
     manim_script: str = ""
 
 class VideoState(BaseModel):
-    topic: Annotated[str, lambda x, y: x]
-    full_script: Annotated[str, lambda x, y: x]
+    topic: str
+    full_script: str
     segments: Annotated[List[VideoSegment], operator.add]
-    final_video_path: Annotated[str, lambda x, y: x]
-    error: Annotated[Optional[str], lambda x, y: y or x] = None  # Keep latest error if any
-    current_segment_id: Annotated[int, lambda x, y: y] 
+    final_video_path: str
+    error: Annotated[Optional[str], operator.add] = None 
+    current_segment_id: int
 
 class ScriptSegment(BaseModel):
     segment_id: int = Field(description="The ID of the segment created")
@@ -37,7 +37,9 @@ class ManimScript(BaseModel):
     estimated_duration: float = Field(description="Estimated durations in seconds")
     animations_used: str = Field(description="List of Manim animations used")
 
-
+class OutputSchema(BaseModel):
+    segments: List[VideoSegment]
+    error: Optional[str]
 
 
 

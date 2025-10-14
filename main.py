@@ -8,6 +8,7 @@ from src.audio import create_audio_graph
 from src.ani_planner import create_animation_planner_graph
 from src.manim_agent import create_manim_graph
 from src.composer import video_composer
+from IPython.display import Image, display
 
 load_dotenv()
 
@@ -39,13 +40,13 @@ def main():
     print("3Blue1Brown style educational video generation")
     print("-" * 30)
 
-    topic = input("\nEnter the video topic you want to explore: ").strip()
+    video_topic = input("\nEnter the video topic you want to explore: ").strip()
 
-    if not topic:
+    if not video_topic:
         print("Topic cannot be empty")
         return
     
-    print(f"Creating video on topic: {topic}")
+    print(f"Creating video on topic: {video_topic}")
     print("-" * 30)
 
     try:
@@ -54,15 +55,17 @@ def main():
 
         app = create_workflow()
 
+        #display(Image(app.get_graph().draw_mermaid_png()))
+
         initial_state = VideoState(
-            topic=topic,
+            topic=video_topic,
             full_script="",
             segments=[],
             final_video_path="",
-            error=None,
             current_segment_id=0      
         )
 
+        print(initial_state)
         print("Starting the video generation pipeline")
 
         result = app.invoke(
@@ -76,7 +79,7 @@ def main():
             }
         )
 
-        if result.error:
+        if hasattr(result, 'error') and result.error:
             print(f"Error with generating results: {result.error}")
             return
         

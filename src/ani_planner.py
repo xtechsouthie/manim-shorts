@@ -4,17 +4,16 @@ from langchain_openai import ChatOpenAI
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.messages import HumanMessage
 from typing import List
-from .state import VideoSegment, VideoState
+from .state import VideoSegment, VideoState, OutputSchema
 from langchain_core.runnables.config import RunnableConfig
 
 def animation_planner_orchestrator(state: VideoState) -> List[Send]:
     print("Starting animation planner orchestrator")
-    return [Send("animation_planner_worker", {"segment": segment, "topic": state.topic}) for segment in state.segments]
+    return [Send("animation_planner_worker", {"segment": segment}) for segment in state.segments]
 
 def animation_planner_worker(data: dict, config: RunnableConfig) -> dict:
 
     segment = data["segment"]
-    topic = data["topic"]
 
 
     llm = config["configurable"]["animation_llm"]
@@ -23,20 +22,19 @@ def animation_planner_worker(data: dict, config: RunnableConfig) -> dict:
 
     try:
         prompt = ChatPromptTemplate.from_messages([
-            ("system", "You are an expert at creating Manim library animation descriptions/prompts for educational videos."),
-            ("human", """Create a detailed Manim animation prompt for this segment:
+            ("system", "You are an expert at creating Manim library animation descriptions/pseudocode for animations in educational videos."),
+            ("human", """Create a detailed Manim pseudocode for this segment:
 
                 Narration: {text}
                 Duration: {duration} seconds
-                Topic: {topic}
-                MAXIMUM LENGTH OF PROMPTS: 75 WORDS. MANAGE THE PROMPT WITHIN THE LIMIT
+                MAXIMUM LENGTH OF PSEUDOCODE: 200 WORDS. MANAGE THE PSEUDOCODE WITHIN THE LIMIT
 
                 The video style should match to that of the youtube channel 3Blue1brown by
-                Grant Sanderson. The video animation prompt/description should be something that
+                Grant Sanderson. The video animation prompt/pseudocode should be something that
                 Manim library can make good animations of, like colourful graphs, diagrams, 3d/2d plots and curves,
                 mathematical expressions, symbols, equations and written words, etc.
 
-                Provide a clear, specific animation description that:
+                Provide a clear, specific animation pseudocode that:
                 1. Matches the narration content, The video prompt should strictly supplement or match the Narration text
                 2. Can be created with Manim (mathematical animations library)
                 3. Is visually engaging and educational
@@ -49,6 +47,11 @@ def animation_planner_worker(data: dict, config: RunnableConfig) -> dict:
                 - What animations to use (FadeIn, Transform, Create, Write, etc.)
                 - Color scheme (use vibrant colors)
                 - Key visual moments that sync with narration
+             
+                pseudocode instructions:
+                1. The pseudocode should be detailed, describing every animation to last detail
+                2. The coding agent can refer to the pseudocode and create exact animations using the manim library
+                3. Make sure that the functions, tools that you use are available in the manim library.
 
                 Be specific and concise.
                 """)
@@ -57,7 +60,6 @@ def animation_planner_worker(data: dict, config: RunnableConfig) -> dict:
         messages = prompt.format_messages(
             text = segment.text,
             duration = segment.audio_duration_sec,
-            topic = topic
         )
 
         response = llm.invoke(messages)
@@ -70,7 +72,7 @@ def animation_planner_worker(data: dict, config: RunnableConfig) -> dict:
         return {"segments": [segment]}
     
 def create_animation_planner_graph():
-    graph = StateGraph(VideoState)
+    graph = StateGraph(state_schema=VideoState, output_schema=OutputSchema)
     try:
 
         graph.add_node("animation_planner_worker", animation_planner_worker)

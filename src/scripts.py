@@ -2,6 +2,7 @@ from langchain_openai import ChatOpenAI
 from langchain_core.messages import HumanMessage
 from .state import VideoState, ScriptOutput, VideoSegment
 from langchain_core.runnables.config import RunnableConfig
+from langchain_core.prompts import ChatPromptTemplate
 
 #change this to use chatprompttemplate as they do in docs
 
@@ -10,7 +11,9 @@ def scriptwriter_agent(state: VideoState, config: RunnableConfig) -> VideoState:
 
     llm = config["configurable"]["script_llm"]
 
-    prompt = f"""Create a 2 minute educational video script about: {state.topic}
+    prompt = ChatPromptTemplate.from_messages([
+    ("system", "You are a expert at creating scripts for science and maths educational videos."),
+    ("human", """Create a 2 minute educational video script about: {topic}
 
     The Video script should be like the videos by youtube channel 3Blue1Brown by Grant Sanderson.
     Make the Script simple and explain concepts clearly with geometrical intuition if possible, Include mathematical expressions and derivations if applicable.
@@ -30,12 +33,13 @@ def scriptwriter_agent(state: VideoState, config: RunnableConfig) -> VideoState:
     8. Don't make it too complex, EXPLAIN IN LAYMAN TERMS
 
     Make it engaging and educational
-    """
+    """)])
 
+    messages = prompt.format_messages(topic = state.topic)
     structured_llm = llm.with_structured_output(ScriptOutput)
 
     try:
-        response = structured_llm.invoke([HumanMessage(content=prompt)])
+        response = structured_llm.invoke(messages)
 
         state.full_script = response.full_script
         print(response.full_script)

@@ -3,7 +3,7 @@ from langgraph.graph import StateGraph, START, END
 from openai import OpenAI
 from typing import List
 from pathlib import Path
-from .state import VideoSegment, VideoState
+from .state import VideoSegment, VideoState,OutputSchema
 from pydub import AudioSegment
 
 def audio_orchestrator(state: VideoState) -> List[Send]:
@@ -53,7 +53,7 @@ def audio_worker(seg: dict) -> dict:
     
 def create_audio_graph():
 
-    graph = StateGraph(VideoState)
+    graph = StateGraph(state_schema=VideoState, output_schema=OutputSchema)
     try:
         graph.add_node("audio_worker", audio_worker)
 

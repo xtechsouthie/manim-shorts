@@ -26,7 +26,7 @@ def video_composer(state: VideoState) -> VideoState:
             video_clip = VideoFileClip(segment.video_path)
             audio_clip = AudioFileClip(segment.audio_path)
 
-            video_with_audio = video_clip.set_audio(audio_clip)
+            video_with_audio = video_clip.with_audio(audio_clip)
 
             if abs(video_clip.duration - audio_clip.duration) > 0.1:
                 if video_clip.duration < audio_clip.duration:

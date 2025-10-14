@@ -37,17 +37,21 @@ def manim_worker(data: dict, config: RunnableConfig) -> dict:
             ("system", """You are an expert Manim (Mathematical Animation Engine) programmer.
 Generate complete, working Manim Community Edition code that creates engaging educational animations.
 Always include proper imports and ensure timing exactly matches the required duration"""),
-        ("human", """Generate a complete Manim Python script for this animation:
+        ("human", """Generate a complete Manim Python script for this animation pseudocode:
 
 KEEP THE CODE SHORT AND SIMPLE, DO NOT GIVE BIG CODE
-Animation Description: {animation_prompt}
+Animation Pseudocode: {animation_prompt}
 Required Duration: {duration} seconds
 Segment ID: {segment_id}
+
+USE THE PSEUDOCODE AND CREATE THE CORRESPONDING ANIMATION USING MANIM.
+KEEP TRACKS OF THE FUNCTIONS AND TOOLS YOU USE, MAKE SURE THEY ARE IN THE MANIM LIBRARY.
+CHECK THE CODE FOR POSSIBLE BUGS BEFORE RESPONDING, THE CODE SHOULD BE BUG FREE.         
 
 Requirements:
 1. Use Manim Community Edition (from manim import *)
 2. Create a Scene class called Segment{segment_id}
-3. MUST use self.wait() (if necessary) to reach EXACTLY {duration} seconds total runtime
+3. MUST use self.wait() (if necessary) to reach EXACTLY {duration} seconds total runtime.
 4. Use clear, educational animations (Write, Create, FadeIn, Transform, etc.)
 5. Include proper timing comments
 6. Use vibrant colors and clear text
@@ -62,7 +66,7 @@ Requirements:
 Total of X + Y + ... should equal {duration} seconds
          
 Animation is planned so that it runs for the given duration, use self.wait() only when the animation timing does not reach the given duration.
-
+         
 Return the complete working code with all imports. Don't give any explainations or text, just give code.""")
         ])
 
