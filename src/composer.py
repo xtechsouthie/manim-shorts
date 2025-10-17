@@ -31,10 +31,10 @@ def video_composer(state: VideoState) -> VideoState:
             if abs(video_clip.duration - audio_clip.duration) > 0.1:
                 if video_clip.duration < audio_clip.duration:
                     print(f"----Extending video to match audio: {audio_clip.duration:.1f}s")
-                    video_with_audio = video_with_audio.set_duration(audio_clip.duration)
+                    video_with_audio = video_with_audio.with_duration(audio_clip.duration)
                 else:
                     print(f"----Trimming video to match audio: {audio_clip.duration:.1f}s")
-                    video_with_audio = video_with_audio.subclip(0, audio_clip.duration)
+                    video_with_audio = video_with_audio.subclipped(0, audio_clip.duration)
 
             merged_clips.append(video_with_audio)
             print(f"----Merged the segment {segment.segment_id}, duration: {audio_clip.duration:.2f}s")
@@ -53,9 +53,10 @@ def video_composer(state: VideoState) -> VideoState:
             str(final_path),
             codec='libx264',
             audio_codec='aac',
-            fps=60,
-            preset='medium',  
-            threads=4 
+            fps=24,
+            preset='veryfast',
+            bitrate="2000k",  
+            threads=8,
         )
 
         state.final_video_path = str(final_path)

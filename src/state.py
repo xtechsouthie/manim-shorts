@@ -19,6 +19,7 @@ class VideoState(BaseModel):
     final_video_path: str
     error: Annotated[Optional[str], operator.add] = None 
     current_segment_id: int
+    segments_needing_regeneration: List[VideoSegment] = []
 
 class ScriptSegment(BaseModel):
     segment_id: int = Field(description="The ID of the segment created")
