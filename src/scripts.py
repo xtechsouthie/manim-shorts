@@ -32,6 +32,7 @@ def scriptwriter_agent(state: VideoState, config: RunnableConfig) -> VideoState:
         give the script like a human would read it. Like instead of f(x), give "f of x". or instead of  x^2 = 4 give "x squared equals 4".
     8. Don't make it too complex, EXPLAIN IN LAYMAN TERMS
 
+    YOUR JOB IS TO JUST WRITE SCRIPT. WRITE THE SCRIPT FOR THIS EDUCATIONAL VIDEO.
     Make it engaging and educational
     """)])
 

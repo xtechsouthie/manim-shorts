@@ -105,7 +105,7 @@ def manim_worker(data: dict, config: RunnableConfig) -> dict:
     print(f"----Worker generating manim script for segement {segment.segment_id}")
 
     if segment.segment_id > 0:
-        delay = int(segment.segment_id) + 1
+        delay = (int(segment.segment_id) * 3) + random.uniform(1,3)
         print(f"----Waiting {delay:.1f}s to avoid rate limits...")
         time.sleep(delay)
 
@@ -187,65 +187,10 @@ Return the complete working code with all imports. Don't give any explainations 
         with open(script_path, "w") as f:
             f.write(manim_code)
 
-        print(f"----Segment {segment.segment_id}: Manim script saved, now rendering")
+        print(f"----Segment {segment.segment_id}: Manim script saved, procceding to send to code reviewer.")
 
-        video_path = video_dir / f"segment_{segment.segment_id}.mp4"
-
-        #see this shii::
-        unique_tex_dir = manim_dir / f"tex_temp_{uuid.uuid4()}"
-        unique_tex_dir.mkdir(exist_ok=True)
-
-        env = os.environ.copy()
-        env["MANIMCE_TEX_DIR"] = str(unique_tex_dir)
-        env["MANIM_DISABLE_CACHING"] = "true"
-
-        render_cmd = [
-            "manim",
-            str(script_path.absolute()),
-            response.class_name,
-            "-qm",
-            "--format", "mp4",
-            "-o", str(video_path.absolute()),
-            "--disable_caching"
-        ]
-
-        result = subprocess.run(
-            render_cmd,
-            capture_output=True,
-            text=True,
-            timeout=180,
-            env=env,
-        )
-
-        if result.returncode != 0:
-            error_msg = result.stderr
-            print(f"----Manim render error: {error_msg}")
-
-            #just tyring to find the output in default manim locations:
-            default_locations = [
-                Path("media/videos") / script_path.stem / "1080p60" / f"{response.class_name}.mp4",
-                Path("media/videos") / script_path.stem / "720p30" / f"{response.class_name}.mp4",
-            ]
-
-            for default_path in default_locations:
-                if default_path.exists():
-                    shutil.move(str(default_path), str(video_path))
-                    print(f"----video was found in default location, moved to {str(video_path)}")
-                    break
-
-        if video_path.exists():
-            segment.video_path = str(video_path)
-            print(f"----Segment {segment.segment_id} rendered successfully")
-        else:
-            raise Exception(f"Video file not created at {str(video_path)}")
-        
-        shutil.rmtree(unique_tex_dir, ignore_errors=True)
-        
         return {"segments": [segment], "segments_needing_regeneration": []}
-    except subprocess.TimeoutExpired:
-        print(f"----ERROR: Segment {segment.segment_id}: Rendering Timeout")
-        return {"segments": [segment], "segments_needing_regeneration": []}
-    
+        
     except Exception as e:
         print(f"----Error rendering segment: {e} ")
         return {"segments": [segment], "segments_needing_regeneration": []}

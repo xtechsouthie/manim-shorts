@@ -8,7 +8,7 @@ from src.audio import create_audio_graph
 from src.ani_planner import create_animation_planner_graph
 from src.manim_agent import create_manim_graph
 from src.reviewer import code_reviewer_node, route_after_review
-from src.composer import video_composer
+from src.composer import video_composer, render_manim_scripts
 from IPython.display import Image, display
 
 load_dotenv()
@@ -22,6 +22,7 @@ def create_workflow():
     workflow.add_node("animation_planning", create_animation_planner_graph())
     workflow.add_node("manim_generation", create_manim_graph())
     workflow.add_node("code_reviewer", code_reviewer_node)
+    workflow.add_node("manim_renderer", render_manim_scripts)
     workflow.add_node("composer", video_composer)
 
     workflow.add_edge(START, "scriptwriter")
@@ -33,8 +34,9 @@ def create_workflow():
     workflow.add_edge("animation_planning", "manim_generation")
 
     workflow.add_edge("manim_generation", "code_reviewer")
-    workflow.add_conditional_edges("code_reviewer", route_after_review, ["manim_generation", "composer"])
+    workflow.add_conditional_edges("code_reviewer", route_after_review, ["manim_generation", "manim_renderer"])
    
+    workflow.add_edge("manim_renderer", "composer")
     workflow.add_edge("composer", END)
 
     return workflow.compile()
@@ -55,7 +57,7 @@ def main():
 
     try:
         openai_llm = ChatOpenAI(model="gpt-5-mini", temperature=0.6)
-        claude_llm = ChatAnthropic(model="claude-3-5-haiku-latest", temperature=0.6, max_tokens_to_sample=4096)
+        claude_llm = ChatAnthropic(model="claude-haiku-4-5-20251001", temperature=0.6, max_tokens_to_sample=4096)
 
         app = create_workflow()
 

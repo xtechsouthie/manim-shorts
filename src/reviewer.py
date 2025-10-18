@@ -243,6 +243,6 @@ def route_after_review(state: VideoState):
         print(f"----Sending {len(segments_needing_regen)} segments back to regeneration")
         return "manim_generation"
     else:
-        print("----All segments validated successfully, proceeding to composer")
-        return "composer"
+        print("----All segments validated successfully, proceeding to renderer")
+        return "manim_renderer"
 

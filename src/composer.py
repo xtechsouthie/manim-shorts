@@ -1,6 +1,93 @@
 from pathlib import Path
 from moviepy import VideoFileClip, AudioFileClip, concatenate_videoclips
 from .state import VideoState
+import subprocess
+import os
+import uuid
+import shutil
+import re
+
+def render_manim_scripts(state: VideoState) -> VideoState:
+
+    print("Starting manim scripts rendering for all segments....")
+
+    manim_dir = Path("video_files/manim_script")
+    video_dir = Path("video_files/video")
+    
+    for segment in state.segments:
+        if not segment.manim_script:
+            print(f"----Skipping segment {segment.segment_id}: No script")
+            continue
+        
+        script_path = manim_dir / f"segment_{segment.segment_id}.py"
+        
+        # Save the reviewed script
+        with open(script_path, "w") as f:
+            f.write(segment.manim_script)
+        
+        print(f"----Rendering segment {segment.segment_id}...")
+        
+        try:
+            video_path = video_dir / f"segment_{segment.segment_id}.mp4"
+            
+            # Create unique tex directory
+            unique_tex_dir = manim_dir / f"tex_temp_{uuid.uuid4()}"
+            unique_tex_dir.mkdir(exist_ok=True)
+            
+            env = os.environ.copy()
+            env["MANIMCE_TEX_DIR"] = str(unique_tex_dir)
+            env["MANIM_DISABLE_CACHING"] = "true"
+            
+            # Extract class name from script
+            class_match = re.search(r'class\s+(\w+)\s*\(', segment.manim_script)
+            class_name = class_match.group(1) if class_match else f"Segment{segment.segment_id}"
+            
+            render_cmd = [
+                "manim",
+                str(script_path.absolute()),
+                class_name,
+                "-qm",
+                "--format", "mp4",
+                "-o", str(video_path.absolute()),
+                "--disable_caching"
+            ]
+            
+            result = subprocess.run(
+                render_cmd,
+                capture_output=True,
+                text=True,
+                timeout=180,
+                env=env,
+            )
+            
+            if result.returncode != 0:
+                print(f"----Render error for segment {segment.segment_id}: {result.stderr}")
+                
+                # Check default locations
+                default_locations = [
+                    Path("media/videos") / script_path.stem / "1080p60" / f"{class_name}.mp4",
+                    Path("media/videos") / script_path.stem / "720p30" / f"{class_name}.mp4",
+                ]
+                
+                for default_path in default_locations:
+                    if default_path.exists():
+                        shutil.move(str(default_path), str(video_path))
+                        print(f"----Found video in default location, moved to {video_path}")
+                        break
+            
+            if video_path.exists():
+                segment.video_path = str(video_path)
+                print(f"----Segment {segment.segment_id} rendered successfully")
+            else:
+                print(f"----ERROR: Video not created for segment {segment.segment_id}")
+            
+            # Cleanup
+            shutil.rmtree(unique_tex_dir, ignore_errors=True)
+            
+        except Exception as e:
+            print(f"----Error rendering segment {segment.segment_id}: {e}")
+    
+    return state
 
 def video_composer(state: VideoState) -> VideoState:
     print("Starting the Video composer, merging the final audio and video")
