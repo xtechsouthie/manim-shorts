@@ -10,6 +10,11 @@ from langchain_core.runnables.config import RunnableConfig
 import os, uuid
 import shutil
 import random, time
+from langchain_chroma import Chroma
+from langchain_openai import OpenAIEmbeddings
+from dotenv import load_dotenv
+
+load_dotenv()
 
 def safe_llm_invoke(llm, messages, max_retries=5, base_delay=2):
     """Retry LLM calls with exponential backoff + jitter if rate limit or timeout occurs."""
@@ -24,6 +29,40 @@ def safe_llm_invoke(llm, messages, max_retries=5, base_delay=2):
             else:
                 raise e
     raise Exception("Too many rate-limit retries, aborting.")
+
+def query_manim_rag(query: str, k: int) -> str:
+    try:
+        chroma_dir = "./chroma_manim_db"
+
+        if not os.path.exists(chroma_dir):
+            print(f"Warning: No database found at {chroma_dir}")
+            return ""
+        
+        embeddings = OpenAIEmbeddings(model="text-embedding-3-small")
+
+        vector_store = Chroma(
+            collection_name="manim_code",
+            embedding_function=embeddings,
+            persist_directory=chroma_dir
+        )
+
+        results = vector_store.similarity_search_with_score(query=query, k=k)
+
+        if not results:
+            print("no results found from rag")
+            return ""
+        
+        examples_text = ""
+        
+        for i, (doc, score) in enumerate(results, 1):
+            examples_text += f"--- Example {i} (from {doc.metadata.get('file', 'unknown')}, similarity: {score:.2f}) ---\n"
+            examples_text += f"```python\n{doc.page_content}\n```\n\n"        
+
+        return examples_text
+
+    except Exception as e:
+        print(f"Error with RAG query: {e}")
+        return ""
 
 
 def manim_orchestrator(state: VideoState) -> List[Send]:
@@ -71,6 +110,8 @@ def manim_worker(data: dict, config: RunnableConfig) -> dict:
         time.sleep(delay)
 
     try:
+        rag_examples = query_manim_rag(segment.animation_prompt, k=2)
+
         structured_llm = llm.with_structured_output(ManimScript)
 
         prompt = ChatPromptTemplate.from_messages([
@@ -83,9 +124,22 @@ KEEP THE CODE SHORT AND SIMPLE, DO NOT GIVE BIG CODE. KEEP SHORT, SIMPLE CODE
 Animation Pseudocode: {animation_prompt}
 Required Duration: {duration} seconds
 Segment ID: {segment_id}
+         
+Below are some example animation manim scripts by 3Blue1Brown for reference
+Please note that these script use the 3b1b version of Manim, not ManimCommunity, so the functions, tools, etc may be different or have different names.
+You have to write code in Manim Community edition, not 3b1b version.
+Some of the code in examples may be old and depreciated, be aware of that while writing your own code.
+Refer to the code for animations, animation styles, colours, visual style, etc.
+         
+<START OF MANIM CODE EXAMPLES>
 
-USE THE PSEUDOCODE AND CREATE THE CORRESPONDING ANIMATION USING MANIM.
-KEEP TRACKS OF THE FUNCTIONS AND TOOLS YOU USE, MAKE SURE THEY ARE IN THE MANIM LIBRARY.
+{examples}
+         
+</END OF MANIM CODE EXAMPLES>
+
+
+USE THE PSEUDOCODE AND CREATE THE CORRESPONDING ANIMATION USING MANIM COMMUNITY EDITION.
+KEEP TRACKS OF THE FUNCTIONS AND TOOLS YOU USE, MAKE SURE THEY ARE IN THE MANIM COMMUNITY EDITION LIBRARY.
 CHECK THE CODE FOR POSSIBLE BUGS BEFORE RESPONDING, THE CODE SHOULD BE BUG FREE.         
 
 Requirements:
@@ -93,18 +147,19 @@ Requirements:
 2. Create a Scene class called Segment{segment_id}
 3. MUST use self.wait() (if necessary) to reach EXACTLY {duration} seconds total runtime.
 4. Use clear, educational animations (Write, Create, FadeIn, Transform, etc.)
-5. Include proper timing comments
-6. Use vibrant colors and clear text
-7. Match the 3Blue1Brown visual style
+5. The video rendered by the code should have no elements that overlap
+6. Use vibrant colors and clear text and include proper timing comments
+7. Match the 3Blue1Brown visual style, refer to example code.
 8. Use ONLY these colors: BLUE, RED, GREEN, YELLOW, PURPLE, ORANGE, WHITE, PINK
    (NO CYAN, GOLD, TEAL, MAGENTA, MAROON - they cause errors)
 9. Use Scene class ONLY (never MovingCameraScene)
-10. For 3D scenes: Use ThreeDScene, not Scene         
+10. For 3D scenes: Use ThreeDScene, not Scene, (although try to use Scene instead of ThreeDScene whenever possible,
+          if the animation strictly requires 3D animation, then only use ThreeDScene)        
         
 # Example code for reference:
 # self.play(SomeAnimation, run_time=X) 
 # self.wait(Y)
-Total of X + Y + ... should equal {duration} seconds
+Total of X + Y + ... should equal {duration} seconds STRICTLY.
          
 Animation is planned so that it runs for the given duration, use self.wait() only when the animation timing does not reach the given duration.
 NO COMMENTS, NO EXPLAINATIONS, JUST RETURN ONLY PYTHON CODE.
@@ -114,6 +169,7 @@ Return the complete working code with all imports. Don't give any explainations 
         messages = prompt.format_messages(
             animation_prompt = segment.animation_prompt,
             duration = segment.audio_duration_sec,
+            examples = rag_examples,
             segment_id=segment.segment_id
         )
 
