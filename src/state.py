@@ -2,6 +2,7 @@ from pydantic import BaseModel, Field
 from typing import List, Dict, Annotated, Optional
 import operator
 
+
 class VideoSegment(BaseModel):
     segment_id: int
     text: str
@@ -12,10 +13,35 @@ class VideoSegment(BaseModel):
     video_path: str = ""
     manim_script: str = ""
 
+def merge_segments_reducer(existing: List[VideoSegment], new: List[VideoSegment]) -> List[VideoSegment]:
+
+    segment_dict = {seg.segment_id: seg for seg in existing}
+    
+    for new_seg in new:
+        if new_seg.segment_id in segment_dict:
+            old_seg = segment_dict[new_seg.segment_id]
+            
+            if new_seg.audio_path:
+                old_seg.audio_path = new_seg.audio_path
+                old_seg.audio_duration_sec = new_seg.audio_duration_sec
+            
+            if new_seg.animation_prompt:
+                old_seg.animation_prompt = new_seg.animation_prompt
+            
+            if new_seg.manim_script:
+                old_seg.manim_script = new_seg.manim_script
+            
+            if new_seg.video_path:
+                old_seg.video_path = new_seg.video_path
+        else:
+            segment_dict[new_seg.segment_id] = new_seg
+    
+    return sorted(segment_dict.values(), key=lambda x: x.segment_id)
+
 class VideoState(BaseModel):
     topic: str
     full_script: str
-    segments: Annotated[List[VideoSegment], operator.add]
+    segments: Annotated[List[VideoSegment], merge_segments_reducer]
     final_video_path: str
     error: Annotated[Optional[str], operator.add] = None 
     current_segment_id: int

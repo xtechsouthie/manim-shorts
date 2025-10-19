@@ -27,7 +27,7 @@ def safe_llm_invoke(llm, messages, max_retries=5, base_delay=3):
 class CodeReviewerAgent:
     """Reviews and fixes the manim code through iterative cycles"""
 
-    def __init__(self, llm: ChatAnthropic, max_cycles: int =3):
+    def __init__(self, llm: ChatAnthropic, max_cycles: int =5):
         self.llm = llm
         self.max_cycles = max_cycles
 
@@ -44,7 +44,6 @@ class CodeReviewerAgent:
         """
 
         current_code = code
-        working_code = None
 
         for cycle in range(self.max_cycles):
             print(f"----Code Review cycle {cycle + 1} for Segment {segment_id}")
@@ -53,11 +52,12 @@ class CodeReviewerAgent:
 
             if success:
                 print(f"----Segement {segment_id} ready to run")
-                working_code = current_code
+                return (current_code, True)
             
             current_code = self._generate_fix(current_code, logs, animation_prompt, duration, segment_id)
 
-        return (working_code or current_code, working_code is not None)
+        print(f"----Segment {segment_id} failed after {self.max_cycles} cycles")
+        return (current_code, False)
     
     def _execute_code(self, code: str, segment_id: int) -> Tuple[bool, str]:
         """Execute Manim code and capture errors"""
@@ -123,18 +123,19 @@ class CodeReviewerAgent:
                     success = False
                     logs += f"\n\nERROR: Scene {scene} validation failed with exit code {process.returncode}\n"
 
-                os.unlink(temp_file)
+            os.unlink(temp_file)
 
-                if success:
-                    return (True, "Success, All scenes are validated successfully")
-                else:
-                    return (False, logs)
+            if success:
+                return (True, "Success, All scenes are validated successfully")
+            else:
+                return (False, logs)
                 
-        except subprocess.TimeoutError:
+                
+        except subprocess.TimeoutExpired:
             if os.path.exists(temp_file):
                 os.unlink(temp_file)
             print("Timeout error in _execute_code")
-            return (False, "Code validation timed out")
+            return (False, "Code validation timed out (timeout error)")
         except Exception as e:
             if os.path.exists(temp_file):
                 os.unlink(temp_file)
@@ -156,7 +157,6 @@ CURRENT CODE:
 ```
 
 EXECUTION LOGS:
-#if there are NO EXECUTION LOGS, return the EXACT code given above WITH NO CHANGES.
 EXECUTION LOGS START--------------
 {logs}
 EXECUTION LOGS END----------------
@@ -175,7 +175,11 @@ REQUIREMENTS:
 6. Use modules and functions that are part of the manim community library
 7. Make sure that Class name is Segment{segment_id} and the class in inhertited from Scene or ThreeDScene Class only.
 8. Refer (if neccessary) to the comment about the previous issue/bug and the fix at the end of the code block if it exists.
+9. The background colour should be pure black (#000000)
+10. Use ONLY valid Manim Community colors: BLUE, RED, GREEN, YELLOW, PURPLE_A, PURPLE_B, PURPLE_C, ORANGE, WHITE, PINK, GRAY
+   - NO: GOLD, TEAL, CYAN, MAGENTA, MAROON, PASTEL_*, VIVID_*, BRIGHT_*
 
+If logs are empty, return the EXACT code unchanged.
 
 DO NOT USE external resources and dependencies like svg's, images or other libraries (other than the one's already used in code)
 DO NOT CHANGE/MENTION MINOR THINGS like missing or wrong comments in code, CHANGE THE CODE that is crucial to the functioning of the code.
@@ -204,7 +208,7 @@ DO NOT CHANGE/MENTION MINOR THINGS like missing or wrong comments in code, CHANG
     
 def code_reviewer_node(state: VideoState, config) -> dict:
 
-    reviewer = CodeReviewerAgent(config["configurable"]["review_llm"], max_cycles=3)
+    reviewer = CodeReviewerAgent(config["configurable"]["review_llm"], max_cycles=5)
 
     updated_segments = []
     segments_needing_regen = []

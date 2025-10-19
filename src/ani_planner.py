@@ -8,7 +8,7 @@ from .state import VideoSegment, VideoState, OutputSchema
 from langchain_core.runnables.config import RunnableConfig
 
 def animation_planner_orchestrator(state: VideoState) -> List[Send]:
-    print("Starting animation planner orchestrator")
+    print(f"Starting animation planner orchestrator for {len(state.segments)} segments")
     return [Send("animation_planner_worker", {"segment": segment}) for segment in state.segments]
 
 def animation_planner_worker(data: dict, config: RunnableConfig) -> dict:

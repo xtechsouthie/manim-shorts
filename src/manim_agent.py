@@ -103,6 +103,7 @@ def manim_worker(data: dict, config: RunnableConfig) -> dict:
     llm = config["configurable"]["manim_llm"]
 
     print(f"----Worker generating manim script for segement {segment.segment_id}")
+    print(f"DEBUG: {segment.segment_id}: {segment}")
 
     if segment.segment_id > 0:
         delay = (int(segment.segment_id) * 3) + random.uniform(1,3)
@@ -154,7 +155,8 @@ Requirements:
    (NO CYAN, GOLD, TEAL, MAGENTA, MAROON - they cause errors)
 9. Use Scene class ONLY (never MovingCameraScene)
 10. For 3D scenes: Use ThreeDScene, not Scene, (although try to use Scene instead of ThreeDScene whenever possible,
-          if the animation strictly requires 3D animation, then only use ThreeDScene)        
+          if the animation strictly requires 3D animation, then only use ThreeDScene)
+11. The background colour should be pure black (#000000)        
         
 # Example code for reference:
 # self.play(SomeAnimation, run_time=X) 

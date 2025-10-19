@@ -30,8 +30,7 @@ def create_workflow():
     workflow.add_edge("scriptwriter", "audio_generation")
     workflow.add_edge("scriptwriter", "animation_planning")
 
-    workflow.add_edge("audio_generation", "manim_generation")
-    workflow.add_edge("animation_planning", "manim_generation")
+    workflow.add_edge(["audio_generation", "animation_planning"], "manim_generation")
 
     workflow.add_edge("manim_generation", "code_reviewer")
     workflow.add_conditional_edges("code_reviewer", route_after_review, ["manim_generation", "manim_renderer"])
