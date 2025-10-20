@@ -44,6 +44,7 @@ media/
 *.wav
 data/
 chroma_manim_db
+chroma_docs_db
 
 # Environment variables
 .env
