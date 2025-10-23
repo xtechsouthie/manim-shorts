@@ -9,7 +9,6 @@ from src.ani_planner import create_animation_planner_graph
 from src.manim_agent import create_manim_graph
 from src.reviewer import code_reviewer_node, route_after_review
 from src.composer import video_composer, render_manim_scripts
-from IPython.display import Image, display
 import os
 
 load_dotenv()
@@ -57,16 +56,9 @@ def main():
 
     try:
         openai_llm = ChatOpenAI(model="gpt-5-mini", temperature=0.6)
-        claude_llm = ChatOpenAI(
-            model="anthropic/claude-sonnet-4.5",  
-            temperature=0.6,
-            max_tokens=4096,
-            base_url="https://openrouter.ai/api/v1",
-            api_key=os.getenv("OPENROUTER_API_KEY"),  
-        )
+        claude_llm = ChatAnthropic(model="claude-sonnet-4-5-20250929", temperature=0.6)
         app = create_workflow()
 
-        #display(Image(app.get_graph().draw_mermaid_png()))
 
         initial_state = VideoState(
             topic=video_topic,
@@ -84,7 +76,7 @@ def main():
             config={
                 "configurable": {
                     "script_llm": openai_llm,
-                    "animation_llm": openai_llm,
+                    "animation_llm": claude_llm,
                     "manim_llm": claude_llm,
                     "review_llm": claude_llm,
                     "summary_llm": openai_llm

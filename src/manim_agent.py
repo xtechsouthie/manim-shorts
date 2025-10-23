@@ -167,7 +167,7 @@ Segment ID: {segment_id}
          
 Below are some example animation manim scripts by 3Blue1Brown for reference
 Please note that these script use the 3b1b version of Manim, not ManimCommunity, so the functions, tools, etc may be different or have different names.
-You have to write code in Manim Community edition, not 3b1b version.
+IMPORTANT: You have to write code in Manim Community edition, not 3b1b version.
 Some of the code in examples may be old and depreciated, be aware of that while writing your own code.
 Refer to the code for animations, animation styles, colours, visual style, etc.
          
@@ -179,14 +179,16 @@ Below are some of the parts of manim community documentation relevant for this a
 <START OF MANIM DOCS>      
 {docs}      
 <END OF MANIM DOCS>
+         
+!!! IMPORTANT: MAKE SURE THAT THE OBJECTS IN ANIMATION ARE IN FRAME AND DON'T OVERLAP (e.g. that the graphs and text dont overlap) (erase old graphs if not needed for explainations)
 
-IMPORTANT TIPS:
-1. USE THE PSEUDOCODE AND CREATE THE CORRESPONDING ANIMATION USING MANIM COMMUNITY EDITION.
-2. KEEP TRACKS OF THE FUNCTIONS AND TOOLS YOU USE, MAKE SURE THEY ARE IN THE MANIM COMMUNITY EDITION LIBRARY.
-3. CHECK THE CODE FOR POSSIBLE BUGS BEFORE RESPONDING, THE CODE SHOULD BE BUG FREE.
-4. PLEASE MAKE SURE THAT THE THE OBJECT IN THE VIDEOS ARE IN FRAME AND DON'T OVERLAP 
-5. IF THE ANIMATION DURATION IS SHORT (i.e you are using self.wait() for more than 10 seconds), THEN SLOW DOWN THE EXISTING ANIMATION (INCREASE THE DURATION OF ANIMATION);
-   OR ADD SOMETHING SHORT OR SIMPLE IN EXISTING ANIMATION, INSTEAD OF USING self.wait() FOR MORE THAN 10 SECONDS.    
+TIPS BASED OF SOME OF THE MOST COMMON ISSUES FACED:
+1. keep track of the functions and tools you use, make sure they are in the manim community edition library.
+2. check the code for possible bugs before responding, the code should be bug free.
+3. please make sure that the objects in the videos are in frame and don't overlap 
+4. if the animation duration is short (i.e you are using self.wait() for more than 10 seconds), then slow down the existing animation (increase the duration of animation);
+   instead of using self.wait() for more than 10 seconds. 
+5. keep the animation plain and readable, don't cram too much text or graphs in one frame.  
 
 Requirements:
 1. Use Manim Community Edition (from manim import *)

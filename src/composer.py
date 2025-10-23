@@ -31,7 +31,6 @@ def render_manim_scripts(state: VideoState) -> VideoState:
             video_path = video_dir / f"segment_{segment.segment_id}.mp4"
             video_dir.mkdir(parents=True, exist_ok=True)
             
-            # Create unique tex directory
             unique_tex_dir = manim_dir / f"tex_temp_{uuid.uuid4()}"
             unique_tex_dir.mkdir(exist_ok=True)
             
@@ -47,7 +46,7 @@ def render_manim_scripts(state: VideoState) -> VideoState:
                 "manim",
                 str(script_path.absolute()),
                 class_name,
-                "-qm",
+                "-qh",
                 "--format", "mp4",
                 "-o", str(video_path.absolute()),
                 "--disable_caching"
@@ -82,7 +81,6 @@ def render_manim_scripts(state: VideoState) -> VideoState:
             else:
                 print(f"----ERROR: Video not created for segment {segment.segment_id}")
             
-            # Cleanup
             shutil.rmtree(unique_tex_dir, ignore_errors=True)
             
         except Exception as e:
@@ -141,10 +139,10 @@ def video_composer(state: VideoState) -> VideoState:
             str(final_path),
             codec='libx264',
             audio_codec='aac',
-            fps=24,
-            preset='veryfast',
+            fps=30,
+            preset='medium',
             audio_bitrate='192k',
-            bitrate="2000k",  
+            bitrate="3000k",  
             threads=8,
         )
 
