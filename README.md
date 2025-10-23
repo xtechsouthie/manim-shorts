@@ -8,7 +8,7 @@ Make sure to turn up the audio
 [Watch the example video](https://github.com/user-attachments/assets/05ca29f9-49cc-4303-ba8b-4e23647b646a)
 
 Another Video:
-[Watch the example video](https://github.com/user-attachments/assets/e0d2176a-fc0f-4772-b5a9-42b755fd1b72)
+[Watch the another example video](https://github.com/user-attachments/assets/e0d2176a-fc0f-4772-b5a9-42b755fd1b72)
 
 ## Overview
 
