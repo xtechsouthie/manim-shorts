@@ -1,20 +1,57 @@
 from langgraph.types import Send
 from langgraph.graph import StateGraph, START, END
-from langchain_openai import ChatOpenAI
+from langchain_openai import ChatOpenAI, OpenAIEmbeddings
+from langchain_chroma import Chroma
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.messages import HumanMessage
 from typing import List
 from .state import VideoSegment, VideoState, OutputSchema
 from langchain_core.runnables.config import RunnableConfig
+import os
 
 def animation_planner_orchestrator(state: VideoState) -> List[Send]:
     print(f"Starting animation planner orchestrator for {len(state.segments)} segments")
     return [Send("animation_planner_worker", {"segment": segment}) for segment in state.segments]
 
+def query_manim_rag(query: str, k: int) -> str:
+    try:
+        chroma_dir = "./chroma_manim_db"
+
+        if not os.path.exists(chroma_dir):
+            print(f"Warning: No database found at {chroma_dir}")
+            return ""
+        
+        embeddings = OpenAIEmbeddings(model="text-embedding-3-small")
+
+        vector_store = Chroma(
+            collection_name="manim_code",
+            embedding_function=embeddings,
+            persist_directory=chroma_dir
+        )
+
+        results = vector_store.similarity_search_with_score(query=query, k=k)
+
+        if not results:
+            print("no results found from rag")
+            return ""
+        
+        examples_text = ""
+        
+        for i, (doc, score) in enumerate(results, 1):
+            examples_text += f"--- Example {i} (from {doc.metadata.get('file', 'unknown')}, similarity: {score:.2f}) ---\n"
+            examples_text += f"```python\n{doc.page_content}\n```\n\n"        
+
+        return examples_text
+
+    except Exception as e:
+        print(f"Error with RAG query: {e}")
+        return ""
+
 def animation_planner_worker(data: dict, config: RunnableConfig) -> dict:
 
     segment = data["segment"]
 
+    code_examples = query_manim_rag(query=segment.text, k=3)
 
     llm = config["configurable"]["animation_llm"]
 
@@ -27,15 +64,26 @@ def animation_planner_worker(data: dict, config: RunnableConfig) -> dict:
 
                 Narration: {text}
                 Duration: {duration} seconds
-                MAXIMUM LENGTH OF PSEUDOCODE: 200 WORDS. MANAGE THE PSEUDOCODE WITHIN THE LIMIT
-
+             
+                Below are some of the code examples from 3Blue1Brown.
+                You can refer to them for making the animation pseudocode.
+                NOTE: The code provided may or may not match this particular animation narration.
+                So use the code as reference only after checking that it is matching this particular animation narration
+             
+                <START OF CODE EXAMPLES>
+             
+                {examples}
+             
+                <END OF CODE EXAMPLES>
+                
+                NOTE: YOU ONLY HAVE TO PROVIDE PSEUDOCODE BASED ON THE NARRATION GIVEN ABOVE.
                 The video style should match to that of the youtube channel 3Blue1brown by
                 Grant Sanderson. The video animation prompt/pseudocode should be something that
                 Manim library can make good animations of, like colourful graphs, diagrams, 3d/2d plots and curves,
                 mathematical expressions, symbols, equations and written words, etc.
 
                 Provide a clear, specific animation pseudocode that:
-                1. Matches the narration content, The video prompt should strictly supplement or match the Narration text
+                1. Matches the narration content, The pseudocode should strictly supplement or match the Narration text
                 2. Can be created with Manim (mathematical animations library)
                 3. Is visually engaging and educational
                 4. Can be completed in {duration} seconds
@@ -60,6 +108,7 @@ def animation_planner_worker(data: dict, config: RunnableConfig) -> dict:
         messages = prompt.format_messages(
             text = segment.text,
             duration = segment.audio_duration_sec,
+            examples = code_examples,
         )
 
         response = llm.invoke(messages)

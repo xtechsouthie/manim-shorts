@@ -4,7 +4,6 @@ from .state import VideoState, ScriptOutput, VideoSegment
 from langchain_core.runnables.config import RunnableConfig
 from langchain_core.prompts import ChatPromptTemplate
 
-#change this to use chatprompttemplate as they do in docs
 
 def scriptwriter_agent(state: VideoState, config: RunnableConfig) -> VideoState:
     print("Running scriptwriter\n")
