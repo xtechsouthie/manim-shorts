@@ -63,6 +63,40 @@ def query_manim_rag(query: str, k: int) -> str:
     except Exception as e:
         print(f"Error with RAG query: {e}")
         return ""
+    
+def query_docs_rag(query: str, k: int) -> str:
+    try:
+        chroma_dir = "./chroma_docs_db"
+
+        if not os.path.exists(chroma_dir):
+            print(f"Warning: No database found at {chroma_dir}")
+            return ""
+        
+        embeddings = OpenAIEmbeddings(model="text-embedding-3-small")
+
+        vector_store = Chroma(
+            collection_name="docs",
+            embedding_function=embeddings,
+            persist_directory=chroma_dir
+        )
+
+        results = vector_store.similarity_search_with_score(query=query, k=k)
+
+        if not results:
+            print("no results found from rag")
+            return ""
+        
+        examples_text = ""
+        
+        for i, (doc, score) in enumerate(results, 1):
+            examples_text += f"--- Example {i}, similarity: {score:.2f}) ---\n"
+            examples_text += f"\n{doc.page_content}\n\n"        
+
+        return examples_text
+
+    except Exception as e:
+        print(f"Error with RAG query: {e}")
+        return ""
 
 
 def manim_orchestrator(state: VideoState) -> List[Send]:
@@ -103,7 +137,6 @@ def manim_worker(data: dict, config: RunnableConfig) -> dict:
     llm = config["configurable"]["manim_llm"]
 
     print(f"----Worker generating manim script for segement {segment.segment_id}")
-    print(f"DEBUG: {segment.segment_id}: {segment}")
 
     if segment.segment_id > 0:
         delay = (int(segment.segment_id) * 3) + random.uniform(1,3)
@@ -111,14 +144,20 @@ def manim_worker(data: dict, config: RunnableConfig) -> dict:
         time.sleep(delay)
 
     try:
-        rag_examples = query_manim_rag(segment.animation_prompt, k=2)
+        code_examples = query_manim_rag(segment.animation_prompt, k=2)
+        docs = query_docs_rag(segment.animation_prompt, k=2)
 
-        structured_llm = llm.with_structured_output(ManimScript)
 
         prompt = ChatPromptTemplate.from_messages([
             ("system", """You are an expert Manim (Mathematical Animation Engine) programmer.
 Generate complete, working Manim Community Edition code that creates engaging educational animations.
-Always include proper imports and ensure timing exactly matches the required duration"""),
+Always include proper imports and ensure timing exactly matches the required duration
+
+CRITICAL: Return ONLY the Python code, nothing else.
+NO markdown code blocks (no ```python or ```).
+NO explanations.
+NO JSON.
+JUST the raw Python code starting with "from manim import *"."""),
         ("human", """Generate a complete Manim Python script for this animation pseudocode:
 
 KEEP THE CODE SHORT AND SIMPLE, DO NOT GIVE BIG CODE. KEEP SHORT, SIMPLE CODE
@@ -133,15 +172,19 @@ Some of the code in examples may be old and depreciated, be aware of that while 
 Refer to the code for animations, animation styles, colours, visual style, etc.
          
 <START OF MANIM CODE EXAMPLES>
-
-{examples}
-         
+{code_examples}     
 </END OF MANIM CODE EXAMPLES>
+         
+Below are some of the parts of manim community documentation relevant for this animation:
+<START OF MANIM DOCS>      
+{docs}      
+<END OF MANIM DOCS>
 
 
 USE THE PSEUDOCODE AND CREATE THE CORRESPONDING ANIMATION USING MANIM COMMUNITY EDITION.
 KEEP TRACKS OF THE FUNCTIONS AND TOOLS YOU USE, MAKE SURE THEY ARE IN THE MANIM COMMUNITY EDITION LIBRARY.
-CHECK THE CODE FOR POSSIBLE BUGS BEFORE RESPONDING, THE CODE SHOULD BE BUG FREE.         
+CHECK THE CODE FOR POSSIBLE BUGS BEFORE RESPONDING, THE CODE SHOULD BE BUG FREE.
+PLEASE MAKE SURE THAT THE THE OBJECT IN THE VIDEOS ARE IN FRAME AND DON'T OVERLAP         
 
 Requirements:
 1. Use Manim Community Edition (from manim import *)
@@ -163,6 +206,7 @@ Requirements:
 # self.wait(Y)
 Total of X + Y + ... should equal {duration} seconds STRICTLY.
          
+USE Scene Class and avoid ThreeDScene class in most of the cases.
 Animation is planned so that it runs for the given duration, use self.wait() only when the animation timing does not reach the given duration.
 NO COMMENTS, NO EXPLAINATIONS, JUST RETURN ONLY PYTHON CODE.
 Return the complete working code with all imports. Don't give any explainations or text, just give code.""")
@@ -171,17 +215,28 @@ Return the complete working code with all imports. Don't give any explainations 
         messages = prompt.format_messages(
             animation_prompt = segment.animation_prompt,
             duration = segment.audio_duration_sec,
-            examples = rag_examples,
+            code_examples = code_examples,
+            docs=docs,
             segment_id=segment.segment_id
         )
 
-        response = safe_llm_invoke(structured_llm, messages)
+        response = safe_llm_invoke(llm, messages)
 
-        manim_code = response.completed_code
+        manim_code = response.content if hasattr(response, 'content') else str(response)
+
         if "```python" in manim_code:
             manim_code = manim_code.split("```python")[1].split("```")[0].strip()
         elif "```" in manim_code:
             manim_code = manim_code.split("```")[1].split("```")[0].strip()
+
+        if not manim_code or len(manim_code) < 50:
+            raise ValueError(f"Generated code too short: {len(manim_code)} chars")
+        
+        if "from manim import" not in manim_code:
+            raise ValueError("Code missing 'from manim import' statement")
+        
+        if f"class Segment{segment.segment_id}" not in manim_code:
+            raise ValueError(f"Code missing 'class Segment{segment.segment_id}' definition")
 
         segment.manim_script = manim_code
         script_path = manim_dir / f"segment_{segment.segment_id}.py"
@@ -195,6 +250,7 @@ Return the complete working code with all imports. Don't give any explainations 
         
     except Exception as e:
         print(f"----Error rendering segment: {e} ")
+        segment.manim_script = ""
         return {"segments": [segment], "segments_needing_regeneration": []}
     
 def create_manim_graph():

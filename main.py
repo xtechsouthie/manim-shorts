@@ -10,6 +10,7 @@ from src.manim_agent import create_manim_graph
 from src.reviewer import code_reviewer_node, route_after_review
 from src.composer import video_composer, render_manim_scripts
 from IPython.display import Image, display
+import os
 
 load_dotenv()
 
@@ -56,8 +57,13 @@ def main():
 
     try:
         openai_llm = ChatOpenAI(model="gpt-5-mini", temperature=0.6)
-        claude_llm = ChatAnthropic(model="claude-haiku-4-5-20251001", temperature=0.6, max_tokens_to_sample=4096)
-
+        claude_llm = ChatOpenAI(
+            model="anthropic/claude-sonnet-4.5",  
+            temperature=0.6,
+            max_tokens=4096,
+            base_url="https://openrouter.ai/api/v1",
+            api_key=os.getenv("OPENROUTER_API_KEY"),  
+        )
         app = create_workflow()
 
         #display(Image(app.get_graph().draw_mermaid_png()))
@@ -80,21 +86,28 @@ def main():
                     "script_llm": openai_llm,
                     "animation_llm": openai_llm,
                     "manim_llm": claude_llm,
-                    "review_llm": claude_llm
+                    "review_llm": claude_llm,
+                    "summary_llm": openai_llm
                 }
             }
         )
 
-        if hasattr(result, 'error') and result.error:
-            print(f"Error with generating results: {result.error}")
+        if isinstance(result, dict):
+            error = result.get('error')
+            final_path = result.get('final_video_path', 'Not generated')
+        else:
+            error = getattr(result, 'error', None)
+            final_path = getattr(result, 'final_video_path', 'Not generated')
+
+        if error:
+            print(f"Error with generating results: {error}")
             return
         
         print("\n" + "="*60)
         print("VIDEO GENERATION COMPLETE")
+        print(f"\nFINAL VIDEO PATH: {final_path}")
         print("=" * 60)
-        print(f"\n Final video path: {result.final_video_path}")
-
-
+    
     except Exception as e:
         print(f"Error: {e}")
 

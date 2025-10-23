@@ -29,6 +29,7 @@ def render_manim_scripts(state: VideoState) -> VideoState:
         
         try:
             video_path = video_dir / f"segment_{segment.segment_id}.mp4"
+            video_dir.mkdir(parents=True, exist_ok=True)
             
             # Create unique tex directory
             unique_tex_dir = manim_dir / f"tex_temp_{uuid.uuid4()}"
@@ -142,6 +143,7 @@ def video_composer(state: VideoState) -> VideoState:
             audio_codec='aac',
             fps=24,
             preset='veryfast',
+            audio_bitrate='192k',
             bitrate="2000k",  
             threads=8,
         )

@@ -45,6 +45,8 @@ media/
 data/
 chroma_manim_db
 chroma_docs_db
+review_logs
+test.py
 
 # Environment variables
 .env

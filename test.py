@@ -1,159 +1,108 @@
-from manim import *
-import numpy as np
+from dotenv import load_dotenv
+from langchain_openai import ChatOpenAI
+import os
 
-class Segment1(ThreeDScene):
-    def construct(self):
-        self.camera.background_color = "#000000"
+load_dotenv()
+
+# Test Claude via OpenRouter
+claude = ChatOpenAI(
+    model="anthropic/claude-sonnet-4",
+    base_url="https://openrouter.ai/api/v1",
+    api_key=os.getenv("OPENROUTER_API_KEY"),
+)
+
+response = claude.invoke("Say 'Hello from Claude!'")
+print(response.content)
+
+class ReviewLogger:
+    """Logs review cycles to files for debugging"""
+    
+    def __init__(self, log_dir: str = "./review_logs"):
+        self.log_dir = log_dir
+        os.makedirs(log_dir, exist_ok=True)
+    
+    def log_cycle(self, segment_id: int, cycle: int, code: str, logs: str, 
+                  summary: str, docs: str, success: bool):
+        """
+        Save a review cycle to both JSON and markdown files
         
-        # Setup 3D axes and title
-        axes_3d = ThreeDAxes(
-            x_range=[-3, 3, 1],
-            y_range=[-3, 3, 1],
-            z_range=[-1, 5, 1],
-            height=6,
-            width=6,
-            depth=4,
-            axis_config={"color": WHITE},
-            tips=False
-        )
+        Args:
+            segment_id: Segment identifier
+            cycle: Current cycle number (1-indexed)
+            code: Current code being reviewed
+            logs: Execution logs
+            summary: Error summary from LLM
+            docs: Retrieved documentation
+            success: Whether validation passed
+        """
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         
-        title = MathTex("z = f(x,y)", color=YELLOW).scale(1.2)
-        title.to_corner(UP + LEFT)
+        # Create segment directory
+        segment_dir = os.path.join(self.log_dir, f"segment_{segment_id}")
+        os.makedirs(segment_dir, exist_ok=True)
         
-        # 2D Reminder on left side
-        number_plane = NumberPlane(
-            x_range=[-3, 3, 1],
-            y_range=[-1, 5, 1],
-            height=4,
-            width=4,
-            background_line_style={"stroke_color": BLUE, "stroke_width": 0.5},
-            axis_config={"color": WHITE}
-        )
-        number_plane.shift(LEFT * 5 + DOWN * 0.5)
+        # Prepare data
+        cycle_data = {
+            "segment_id": segment_id,
+            "cycle": cycle,
+            "timestamp": timestamp,
+            "success": success,
+            "code": code,
+            "execution_logs": logs,
+            "error_summary": summary,
+            "retrieved_docs": docs
+        }
         
-        def f1(t):
-            return 0.5 * t**2
+        # Save as JSON
+        json_path = os.path.join(segment_dir, f"cycle_{cycle}.json")
+        with open(json_path, "w") as f:
+            json.dump(cycle_data, f, indent=2)
         
-        param_curve = ParametricFunction(
-            lambda t: [t, f1(t), 0],
-            t_range=[-2.5, 2.5],
-            color=BLUE
-        )
-        param_curve.scale(0.8)
-        param_curve.shift(LEFT * 5 + DOWN * 0.5)
+        # Save as Markdown (more readable)
+        md_path = os.path.join(segment_dir, f"cycle_{cycle}.md")
+        with open(md_path, "w") as f:
+            f.write(f"# Review Cycle {cycle} - Segment {segment_id}\n\n")
+            f.write(f"**Timestamp:** {timestamp}\n")
+            f.write(f"**Status:** {'✅ SUCCESS' if success else '❌ FAILED'}\n\n")
+            
+            f.write("---\n\n")
+            f.write("## 📝 Code\n\n")
+            f.write("```python\n")
+            f.write(code)
+            f.write("\n```\n\n")
+            
+            f.write("---\n\n")
+            f.write("## 🐛 Error Summary\n\n")
+            f.write(f"{summary}\n\n")
+            
+            f.write("---\n\n")
+            f.write("## 📋 Execution Logs\n\n")
+            f.write("```\n")
+            f.write(logs[:2000] if len(logs) > 2000 else logs)  # Truncate very long logs
+            if len(logs) > 2000:
+                f.write("\n... (truncated, see JSON for full logs)\n")
+            f.write("\n```\n\n")
+            
+            f.write("---\n\n")
+            f.write("## 📚 Retrieved Documentation\n\n")
+            f.write(docs if docs else "No documentation retrieved")
+            f.write("\n\n")
         
-        derivative_text = Text("derivative = slope", color=WHITE, font_size=24)
-        derivative_text.next_to(number_plane, DOWN, buff=0.3)
+        print(f"💾 Saved cycle {cycle} logs to {segment_dir}")
+    
+    def create_summary(self, segment_id: int, total_cycles: int, final_success: bool):
+        """Create a summary file for the entire review process"""
+        segment_dir = os.path.join(self.log_dir, f"segment_{segment_id}")
+        summary_path = os.path.join(segment_dir, "SUMMARY.md")
         
-        # Tangent line at t=1
-        t0 = 1
-        slope = t0
-        p_start = np.array([t0 - 1, f1(t0 - 1), 0])
-        p_end = np.array([t0 + 1, f1(t0 + 1), 0])
-        tangent_line = Line(p_start, p_end, color=ORANGE, stroke_width=3)
-        tangent_line.scale(0.8)
-        tangent_line.shift(LEFT * 5 + DOWN * 0.5)
+        with open(summary_path, "w") as f:
+            f.write(f"# Review Summary - Segment {segment_id}\n\n")
+            f.write(f"**Total Cycles:** {total_cycles}\n")
+            f.write(f"**Final Status:** {'✅ SUCCESS' if final_success else '❌ FAILED'}\n\n")
+            f.write("## Cycles\n\n")
+            for i in range(1, total_cycles + 1):
+                f.write(f"- [Cycle {i}](cycle_{i}.md)\n")
+            f.write("\n---\n\n")
+            f.write(f"*Generated at {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}*\n")
         
-        # Animations: 2D setup
-        self.play(FadeIn(number_plane), run_time=0.5)
-        self.play(Create(param_curve), run_time=0.6)
-        self.play(Write(derivative_text), run_time=0.5)
-        self.play(Create(tangent_line), run_time=0.4)
-        
-        self.wait(1)
-        
-        # Transition to 3D
-        self.play(
-            FadeOut(number_plane),
-            FadeOut(param_curve),
-            FadeOut(derivative_text),
-            FadeOut(tangent_line),
-            run_time=1
-        )
-        
-        self.play(FadeIn(axes_3d), run_time=0.8)
-        self.play(Write(title), run_time=0.5)
-        
-        self.wait(0.5)
-        
-        # Create 3D surface
-        def f(u, v):
-            return 0.2 * (u**2 + v**2)
-        
-        surface = Surface(
-            lambda u, v: [u, v, f(u, v)],
-            u_range=[-2.5, 2.5],
-            v_range=[-2.5, 2.5],
-            resolution=(25, 25),
-            color=BLUE,
-            opacity=0.8
-        )
-        
-        self.play(Create(surface), run_time=2.5)
-        
-        # Set up 3D camera view
-        self.set_camera_orientation(phi=60 * DEGREES, theta=45 * DEGREES)
-        
-        self.wait(1)
-        
-        # Pick a point on surface
-        x0, y0 = 1, 1
-        z0 = f(x0, y0)
-        point_3d = np.array([x0, y0, z0])
-        
-        dot = Dot3D(point_3d, color=BLUE, radius=0.12)
-        self.play(FadeIn(dot), run_time=0.6)
-        
-        self.wait(0.5)
-        
-        # Create tangent plane
-        grad_x = 0.4 * x0
-        grad_y = 0.4 * y0
-        normal = np.array([grad_x, grad_y, -1])
-        normal = normal / np.linalg.norm(normal)
-        
-        plane_size = 2
-        u_vec = np.array([1, 0, 0.4 * x0])
-        u_vec = u_vec / np.linalg.norm(u_vec)
-        v_vec = np.cross(normal, u_vec)
-        v_vec = v_vec / np.linalg.norm(v_vec)
-        
-        corners = []
-        for i in [-1, 1]:
-            for j in [-1, 1]:
-                corner = point_3d + i * plane_size * u_vec + j * plane_size * v_vec
-                corners.append(corner)
-        
-        plane_vertices = [corners[0], corners[1], corners[3], corners[2]]
-        tangent_plane = Polygon(*plane_vertices, color=YELLOW, fill_opacity=0.6, stroke_width=2)
-        
-        self.play(Create(tangent_plane), run_time=1.5)
-        
-        self.wait(1)
-        
-        # Label tangent plane
-        plane_label = MathTex("\\text{tangent plane}", color=YELLOW, font_size=32)
-        plane_label.next_to(dot, UP + RIGHT, buff=0.5)
-        
-        self.play(Write(plane_label), run_time=0.8)
-        
-        self.wait(1)
-        
-        # Rotate camera slowly
-        self.play(
-            self.camera.animate.set_euler_angles(
-                phi=50 * DEGREES,
-                theta=60 * DEGREES
-            ),
-            run_time=3
-        )
-        
-        self.wait(2)
-        
-        # Highlight plane edge
-        self.play(
-            tangent_plane.animate.set_stroke(color=WHITE, width=4),
-            run_time=1
-        )
-        
-        self.wait(4)
+        print(f"📊 Created summary at {summary_path}")
