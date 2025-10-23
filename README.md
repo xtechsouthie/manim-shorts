@@ -1,8 +1,8 @@
-# Auto 3Blue1Brown Video Generator
+# Auto 3Blue1Brown Short Video Generator
 
-A multi-agent AI orchestration system that autonomously generates educational mathematics and science videos in the style of 3Blue1Brown. Built with Multi Agent orchestration (LangGraph), advanced RAG pipelines, and intelligent code synthesis capabilities.
+A multi-agent AI orchestration system that autonomously generates educational mathematics and science videos in the style of 3Blue1Brown. Built with Multi Agent orchestration (LangGraph), advanced RAG pipelines, and intelligent code synthesis capabilities. The videos generated are of high mathematical accuracy.
 
-## Example Output
+## Example Output on derivatives created by the agents (without any human intervention):
 
 [Watch the example video](https://github.com/user-attachments/assets/05ca29f9-49cc-4303-ba8b-4e23647b646a)
 
@@ -15,6 +15,15 @@ Key technical details:
 - **Dual RAG Architecture**: Separate vector stores for code patterns and API documentation
 - **Iterative Self-Correction**: Autonomous code review agent with documentation-grounded error recovery
 - **Production-Ready Pipeline**: Handles scriptwriting, neural TTS, animation synthesis, code generation, validation, and video composition end-to-end
+
+
+## Architecture
+
+**Multi-Agent Orchestration Pipeline** powered by LangGraph state machine:
+
+![Architecture Diagram](architecture.png)
+
+**Technical Stack**: LangGraph orchestration | Dual RAG (ChromaDB) | Multi-model inference (GPT-5 + Claude Sonnet 4.5) | Manim rendering engine | FFmpeg composition
 
 ## Features
 
@@ -30,15 +39,6 @@ Key technical details:
 [Watch the example video](derivatives_final_video.mp4)
 
 *Complete AI-generated educational video on calculus derivatives - zero human intervention required*
-
-## Architecture
-
-**Multi-Agent Orchestration Pipeline** powered by LangGraph state machine:
-
-![Architecture Diagram](architecture.png)
-
-
-**Technical Stack**: LangGraph orchestration | Dual RAG (ChromaDB) | Multi-model inference (GPT-5 + Claude Sonnet 4.5) | Manim rendering engine | FFmpeg composition
 
 ## Prerequisites
 
@@ -263,22 +263,8 @@ See `pyproject.toml` for complete dependency list.
 - Video generation takes approx. 15 minutes per 3-minute video
 - Manim code may require manual fixes for very complex visualizations
 - Limited to mathematical and scientific topics suitable for Manim
-
-## Cost Estimation
-
-Approximate costs per 2-minute video:
-
-- Script generation: $0.01
-- Audio generation (TTS): $0.15
-- Animation planning: $0.05
-- Manim code generation: $0.10
-- Code review (3 cycles avg): $0.15
-- **Total: ~$0.50 per video**
-
-Costs vary based on:
-- Video complexity
-- Number of review cycles needed
-- LLM provider pricing
+- Minor problems like overlapping objects and discoloured/irregular colours of text
+- Faces problems with video animation and spoken audio word syncing. 
 
 ## Contributing
 
