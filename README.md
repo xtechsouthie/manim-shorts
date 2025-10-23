@@ -2,6 +2,10 @@
 
 A multi-agent AI orchestration system that autonomously generates educational mathematics and science videos in the style of 3Blue1Brown. Built with Multi Agent orchestration (LangGraph), advanced RAG pipelines, and intelligent code synthesis capabilities.
 
+## Example Output
+
+[Watch the example video](https://github.com/user-attachments/assets/05ca29f9-49cc-4303-ba8b-4e23647b646a)
+
 ## Overview
 
 This project leverages **multi-agent orchestration** and **retrieval-augmented generation (RAG)** to create complete educational videos from a single topic input. The system implements a sophisticated **autonomous agent workflow** with **self-healing code generation**, combining ChatGPT and Claude models in a coordinated pipeline.
@@ -21,7 +25,7 @@ Key technical details:
 - **Self-Healing Code Review**: Multi-cycle autonomous debugging with documentation-grounded error recovery
 - **Intelligent Video Composition**: Automated rendering orchestration with quality optimization
 
-## Example Output
+## Example video given in the repo:
 
 [Watch the example video](derivatives_final_video.mp4)
 
