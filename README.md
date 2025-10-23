@@ -3,6 +3,7 @@
 A multi-agent AI orchestration system that autonomously generates educational mathematics and science videos in the style of 3Blue1Brown. Built with Multi Agent orchestration (LangGraph), advanced RAG pipelines, and intelligent code synthesis capabilities. The videos generated are of high mathematical accuracy.
 
 ## Example Output on derivatives created by the agents (without any human intervention):
+Make sure to turn up the audio
 
 [Watch the example video](https://github.com/user-attachments/assets/05ca29f9-49cc-4303-ba8b-4e23647b646a)
 
