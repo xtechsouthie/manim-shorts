@@ -1,6 +1,6 @@
 # Auto 3Blue1Brown Short Video Generator
 
-A multi-agent AI orchestration system that autonomously generates educational mathematics and science videos in the style of 3Blue1Brown. Built with Multi Agent orchestration (LangGraph), advanced RAG pipelines, and intelligent code synthesis capabilities. The videos generated are of high mathematical accuracy.
+A multi-agent AI orchestration system that autonomously generates short (2-3 minutes) educational mathematics and science videos in the style of 3Blue1Brown. Built with Multi Agent orchestration (LangGraph), advanced RAG pipelines, and intelligent code synthesis capabilities. The videos generated are of high mathematical accuracy.
 
 ## Example Output Videos on derivatives created by the agents (without any human intervention):
 Make sure to turn up the audio
